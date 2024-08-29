@@ -6,6 +6,8 @@ import csv
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
 from datetime import datetime
 from collections import Counter
 
@@ -28,7 +30,7 @@ try:
 except Exception as e:
     pass
 
-# Connect to Zabbix API, data in .env file
+#Connect to Zabbix API, data in .env file
 zapi = ZabbixAPI(zabbix_server)
 zapi.login(zabbix_username, zabbix_password)
 print(f"Connected to Zabbix API Version {zapi.api_version()}")
@@ -50,17 +52,20 @@ with open ('vpnlist.txt', 'r') as file:
 #hosts dict to keep connection status value 0 - not connected, 1 - connected, 11 - no host found, 12 - no hisotrical data, 13 - no item zabbix[host,agent,available]
 hostsDict = {}
 
+
+# salonList = ['A144']
+
 for host_name in salonList:
     host = zapi.host.get(filter={"host": host_name})
 
     if host:
         host_id = host[0]["hostid"]
         items = zapi.item.get(hostids=host_id, output="extend")
-        print(f"Number of items for host '{host_name}': {len(items)}")
+        #print(f"Number of items for host '{host_name}': {len(items)}")
     else:
         #11
         hostsDict[host_name] = 11
-        print(f"No host found with name '{host_name}'")
+        #print(f"No host found with name '{host_name}'")
 
     # Example: Get latest data for a specific item
     if items:
@@ -69,10 +74,11 @@ for host_name in salonList:
         
         if item:
             item_id = item[0]["itemid"]
-            history = zapi.history.get(itemids=item_id, limit=1, output="extend", sortfield="clock", sortorder="DESC")
+            history = zapi.history.get(itemids=item_id, limit=10, output="extend", sortfield="clock", sortorder="DESC")
             #0/1
             if history:
-                print(f"{host_name} - {history[0]['value']}")
+                #print(history)
+                #print(f"{host_name} - {history[0]['value']}")
                 hostsDict[host_name] = history[0]['value']
             else:
                 #12
@@ -93,7 +99,8 @@ count_dict = Counter(hostsDict.values())
 #connected/disconected summary
 summary_count_txt = f"{formatDateTime}\nLiczba połaczonych klientów: {count_dict['1']}, liczba rozłączonych: {count_dict['0']}\n"
 
-connected_hosts = disconnected_hosts = []
+connected_hosts = []
+disconnected_hosts = []
 error_dict = {}
 
 #hosts status to lists/dict
@@ -109,11 +116,12 @@ for k,v in hostsDict.items():
 with open ('connection_summary.txt', 'a') as file:
     file.write(summary_count_txt)
 
-with open('list_connection_summary.txt', 'a') as file:
+with open('connected_list.txt', 'a') as file:
     file.write(summary_count_txt)
-    file.write("Połączone salony:\n")
     file.write('\n'.join(connected_hosts) + '\n')
-    file.write("Rozłączone salony:\n")
+    
+with open('disconnected_list.txt', 'a') as file:
+    file.write(summary_count_txt)
     file.write('\n'.join(disconnected_hosts) + '\n')
 
 if error_dict:
@@ -126,25 +134,81 @@ if error_dict:
 #email list of hosts
 
 #tutaj lista salonow jest gotowa, wystarczy przygotowac maila i testować
-#mail_hosts_list = [host.lower() + email_suffix for host in disconnected_hosts]
+mail_hosts_list = [host.lower() + email_suffix for host in disconnected_hosts]
 
-mail_hosts_list = ['ziemowitpalka@gmail.com','karol.piechura@cdrl.pl','kornelia.pawlicka@cdrl.pl','tomasz.walenciak@cdrl.pl','it@cdrl.pl']
+print(mail_hosts_list)
+
+#mail_hosts_list = ['ziemowit.palka@cdrl.pl','karol.piechura@cdrl.pl','kornelia.pawlicka@cdrl.pl','tomasz.walenciak@cdrl.pl','it@cdrl.pl']
+#mail_hosts_list = ['ziemowit.palka@cdrl.pl']
+
+
 
 try:
     msg = MIMEMultipart()
     msg['From'] = from_address
     msg["To"] = ", ".join(mail_hosts_list)
-    msg['Subject'] = f"Test mail salony {formatDateTime}."
+    msg['Subject'] = f"Przypomnienie FortiClient"
     
 except Exception as e:
     with open ('logfile.log', 'a') as file:
         file.write(f""" Problem z wysłaniem email - {str(e)}\n""")
 body = "Test"
-msg.attach(MIMEText(body, 'html'))
+
+
+html_body = """
+<html>
+    <body>
+        <p>Dzień dobry, przypominamy o konieczności połączenia programu FortiClient podczas godzin pracy salonu. <b>Program ten jest niezbędny do poprawnego funkcjonowania systemu 
+        (m.in. działania programu lojalnościowego, obsługi zwrotów, posiadania najnowszych przecen oraz promocji, łączności z centralą).</b>
+        Aby włączyć program należy nacisnąć przycisk connect.</p>
+        <p>
+        <img src="cid:image1">
+        <img src="cid:image2"></p>
+        <p>Prawidłowo połączony program FortiClient posiada żółtą kłódkę na ikonie aplikacji na pasku zadań.</p>
+        <p>
+        <img src="cid:image3">
+        <img src="cid:image4"></p>
+        <p>Rozłączony program takowej kłódki nie posiada.</p>
+        <p>
+        <img src="cid:image5"></p>
+        <p>Finalny status programu FortiClient, który działa poprawnie posiada wszystkie informacje jak na zdjęciu poniżej.</p>
+        <p>
+        <img src="cid:image6"></p>
+         <p>Czasem zdarzy się jednak, że pomimo posiadania kłódki aplikacja nie działa poprawnie (jeśli występuje jeden z problemów opisanych wyżej), w takiej
+    sytuacji w aplikacji może brakować "IP Address" lub nie są otrzymywane pakiety (Bytes Received oraz Bytes Sent).
+    Aplikacje należy wtedy uruchomić ponownie "Disconnect", a potem "Connect". </p>
+    <p>Wiadomość została wysłana automatycznie oraz powinna trafić tylko do salonów, które mają rozłączony program FortiClient.
+    Prosimy nie odpowiadać na tego maila. Jeśli uważają Państwo, że nie powinni byli Państwo dostać tego maila, proszę skontaktować się z telefonicznie z działem IT pod numer 602 710 974
+lub napisać zgłoszenie na SalonDesk.
+    Wszelkie potrzebne informacje znajdą Państwo na stronie <a href="https://cdrl.sharepoint.com/sites/salondesk">SalonDesk</a></p>
+    </body>
+</html>
+"""
+
+# Attach the HTML body to the email
+msg.attach(MIMEText(html_body, 'html'))
+
+
+
+# List of images to embed
+images = ['vpn_connect.png','vpn_connect2.png','vpn_correct.png', 'vpn_hiddencorrect.png', 'vpn_incorrect.png', 'vpn_status.png']
+image_folder = 'images'
+# Attach each image and give it a Content-ID
+for i, image in enumerate(images):
+    image_path = os.path.join(image_folder, image)
+    try:
+        with open(image_path, 'rb') as img_file:
+            mime_image = MIMEImage(img_file.read())
+            mime_image.add_header('Content-ID', f'<image{i+1}>')
+            mime_image.add_header('Content-Disposition', 'inline', filename=image)
+            msg.attach(mime_image)
+    except Exception as e:
+        with open('logfile.log', 'a') as file:
+            file.write(f"{formatDateTime} Problem with embedding {image} - {str(e)}\n")
+
 try:
     server = smtplib.SMTP('smtp-mail.outlook.com', 587)
     server.starttls()
-    print(from_address,password)
     server.login(from_address, password)
     text = msg.as_string()
     server.sendmail(from_address, mail_hosts_list, text)
