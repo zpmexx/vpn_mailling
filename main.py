@@ -21,11 +21,14 @@ email_suffix = os.getenv('email_suffix')
 from_address = os.getenv('from_address')
 password = os.getenv('password')
 
+# db details
 
-now = formatDateTime = formatted_date = None
+
+now = formatDateTime = formatted_date = formatDbDateTime = None
 try:
     now = datetime.now()
     formatDateTime = now.strftime("%d/%m/%Y %H:%M")
+    formatDbDateTime = now.strftime("%Y/%m/%d %H:%M")
     formatted_date = now.strftime("%Y-%m-%d")
 except Exception as e:
     pass
@@ -136,11 +139,12 @@ if error_dict:
 #tutaj lista salonow jest gotowa, wystarczy przygotowac maila i testować
 mail_hosts_list = [host.lower() + email_suffix for host in disconnected_hosts]
 
-print(mail_hosts_list)
+#print(mail_hosts_list)
 
 #mail_hosts_list = ['ziemowit.palka@cdrl.pl','karol.piechura@cdrl.pl','kornelia.pawlicka@cdrl.pl','tomasz.walenciak@cdrl.pl','it@cdrl.pl']
 #mail_hosts_list = ['ziemowit.palka@cdrl.pl']
 
+#mail_hosts_list = []
 
 
 try:
@@ -178,7 +182,7 @@ html_body = """
     sytuacji w aplikacji może brakować "IP Address" lub nie są otrzymywane pakiety (Bytes Received oraz Bytes Sent).
     Aplikacje należy wtedy uruchomić ponownie "Disconnect", a potem "Connect". </p>
     <p>Wiadomość została wysłana automatycznie oraz powinna trafić tylko do salonów, które mają rozłączony program FortiClient.
-    Prosimy nie odpowiadać na tego maila. Jeśli uważają Państwo, że nie powinni byli Państwo dostać tego maila, proszę skontaktować się z telefonicznie z działem IT pod numer 602 710 974
+    Prosimy nie odpowiadać na tego maila. Jeśli uważają Państwo, że nie powinni byli dostać tego maila, proszę skontaktować się z telefonicznie z działem IT pod numer 602 710 974
 lub napisać zgłoszenie na SalonDesk.
     Wszelkie potrzebne informacje znajdą Państwo na stronie <a href="https://cdrl.sharepoint.com/sites/salondesk">SalonDesk</a></p>
     </body>
@@ -218,7 +222,23 @@ except Exception as e:
         file.write(f"""{formatDateTime} Problem z wysłaniem maila - {str(e)}\n""")
 
 
+#insert data to db
+try:
+    import pyodbc
+    load_dotenv()
+    db_password = os.getenv('db_password')
+    db_user = os.getenv('db_user')
+    db_server = os.getenv('db_server')
+    db_driver = os.getenv('db_driver')
+    db_db = os.getenv('db_db')
 
-
-
+    cnxn = pyodbc.connect(f'Driver={db_driver};;Server={db_server};Database={db_db};User ID={db_user};Password={db_password}')
+    cursor = cnxn.cursor()
+    for k,v in hostsDict.items():
+        cursor.execute("insert into vpns_status(salon, date,status) values (?,?,?)",k,formatDbDateTime,v)
+        cnxn.commit()
+except Exception as e:
+    with open ('logfile.log', 'a') as file:
+        file.write(f""" Problem z importem do bazy danych - {str(e)}\n""")
+    
 
