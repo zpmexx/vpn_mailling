@@ -1,0 +1,1 @@
+python send_mail_no_db.py

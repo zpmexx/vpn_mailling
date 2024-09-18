@@ -17,7 +17,7 @@ missing_in_zabix = {k: fortix_dict[k] for k in zabix_dict if k not in zabix_dict
 # Find keys in dict2 not in dict1
 missing_in_fortix = {k: zabix_dict[k] for k in zabix_dict if k not in fortix_dict}
 
-# Find keys in both dicts but with different values
+# Find keys in both dicts but with different valuesh
 different_values = {k: (fortix_dict[k], zabix_dict[k]) for k in fortix_dict if k in zabix_dict and fortix_dict[k] != zabix_dict[k]}
 
 # Output differences
