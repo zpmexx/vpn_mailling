@@ -193,7 +193,6 @@ lub napisać zgłoszenie na SalonDesk.
 msg.attach(MIMEText(html_body, 'html'))
 
 
-
 # List of images to embed
 images = ['vpn_connect.png','vpn_connect2.png','vpn_correct.png', 'vpn_hiddencorrect.png', 'vpn_incorrect.png', 'vpn_status.png']
 image_folder = 'images'
