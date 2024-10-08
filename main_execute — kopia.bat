@@ -1,1 +1,0 @@
-python vpn_check.py

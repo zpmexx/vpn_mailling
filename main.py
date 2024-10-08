@@ -156,7 +156,7 @@ try:
 except Exception as e:
     with open ('logfile.log', 'a') as file:
         file.write(f""" Problem z wysłaniem email - {str(e)}\n""")
-body = "Test"
+#body = "Test"
 
 
 html_body = """

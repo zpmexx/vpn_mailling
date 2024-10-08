@@ -48,7 +48,7 @@ salonList = []
 with open ('vpnlist.txt', 'r') as file:
     for line in file.readlines():
         salonList.append(line.strip())
-
+        
 #salonList = ['A144']
 
 zabix_dict = {}
@@ -59,6 +59,7 @@ for host_name in salonList:
     
     if host:
         host_id = host[0]["hostid"]
+        #get host ip address
         interfaces = zapi.hostinterface.get(hostids=host_id, output=["ip"])
         ip_address = interfaces[0]["ip"]
         zabix_dict[host_name] = ip_address
