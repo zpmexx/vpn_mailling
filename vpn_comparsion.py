@@ -39,15 +39,13 @@ print(f"Connected to Zabbix API Version {zapi.api_version()}")
 hosts = zapi.host.get(output="extend")
 print(f"Number of hosts in Zabbix: {len(hosts)}")
 
-# Example: Check if a specific host has any items
-
 #Hosts\clients list
-salonList = []
+salonList = [host['name'] for host in hosts if len(host['name']) < 8]
 
 # list of all clients to query
-with open ('vpnlist.txt', 'r') as file:
-    for line in file.readlines():
-        salonList.append(line.strip())
+# with open ('vpnlist.txt', 'r') as file:
+#     for line in file.readlines():
+#         salonList.append(line.strip())
         
 #salonList = ['A144']
 
@@ -78,13 +76,13 @@ vpn_comparsion_adresses = os.getenv('vpn_comparsion_adresses')
 cnxn = pyodbc.connect(f'Driver={db_driver};;Server={db_server};Database={sba_db_db};User ID={sba_db_user};Password={sba_db_password}')
 cursor = cnxn.cursor()
 
-cursor.execute("SELECT ST_NAZWA, AKTUALNE_IP from dbo.STANOWISKA ")
+cursor.execute("SELECT ST_NAZWA, AKTUALNE_IP from dbo.STANOWISKA where len(ST_NAZWA) < 8 and CFG_DATA >= DATEADD(DAY, -30, GETDATE()) and AKTYWNE = 'T'")
 db_hosts = cursor.fetchall()
 
 for host in db_hosts:
-    if host[0] in salonList:
-        sba_db_dict[host[0]] = host[1]
-
+    sba_db_dict[host[0]] = host[1]
+print(len(sba_db_dict))
+print(len(zabix_dict))
 # pierwsza jest w bazie (aktualna w teorii, druga zabix nieakutalna w teorii)
 different_values = {k: (sba_db_dict[k], zabix_dict[k]) for k in sba_db_dict if k in zabix_dict and sba_db_dict[k] != zabix_dict[k]}
 to_address = json.loads(vpn_comparsion_adresses)

@@ -21,11 +21,12 @@ from_address = os.getenv('from_address')
 password = os.getenv('password')
 now = formatDateTime = formatted_date = None
 try:
-    now = datetime.now()
+    now = datetime.datetime.now()
     formatDateTime = now.strftime("%d/%m/%Y %H:%M")
     formatted_date = now.strftime("%Y-%m-%d")
 except Exception as e:
-    pass
+    with open ('logfile.log', 'a') as file:
+        file.write(f"""Porownanie IP VPNLIST.TXT <> IT MANN: Problem z pobraniem daty - {str(e)}\n""")
 
 cnxn = pyodbc.connect(f'Driver={db_driver};;Server={db_server};Database={sba_db_db};User ID={sba_db_user};Password={sba_db_password}')
 cursor = cnxn.cursor()
@@ -61,7 +62,7 @@ try:
     
 except Exception as e:
     with open ('logfile.log', 'a') as file:
-        file.write(f"""Porownanie IP ZABIX <> SBA IT: Problem z wysłaniem email - {str(e)}\n""")
+        file.write(f"""Porownanie IP IT MANN <> VPNLIST.TXT: Problem z wysłaniem email - {str(e)}\n""")
 
 body = ""
 
