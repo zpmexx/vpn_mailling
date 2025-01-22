@@ -8,11 +8,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
+from email import encoders
 
 load_dotenv()
 sba_db_password = os.getenv('sba_db_password')
 sba_db_user = os.getenv('sba_db_user')
 db_server = os.getenv('db_server')
+ignored_hosts = os.getenv('ignored_hosts')
 db_driver = os.getenv('db_driver')
 sba_db_db = os.getenv('sba_db_db')
 my_address = os.getenv('vpn_comparsion_adresses')
@@ -29,7 +31,11 @@ try:
 except Exception as e:
     pass
 
-
+try:
+    ignored_hosts = json.loads(ignored_hosts)
+except Exception as e:
+    with open ('logfile.log', 'a') as file:
+        file.write(f"""Aktwyne salony check problem z ładowaniem ignorowanych salonów - {str(e)}\n""")
 cnxn = pyodbc.connect(f'Driver={db_driver};;Server={db_server};Database={sba_db_db};User ID={sba_db_user};Password={sba_db_password}')
 cursor = cnxn.cursor()
 
@@ -40,6 +46,9 @@ inactiveList = []
 inactiveWithT = [] #salony nieaktywne z flaga T (aktywne) w db
 activeWithN = [] #salony aktywne z flaga N (niekatywne) w db
 for host in hosts:
+    # Ignore ignored hosts from .env 
+    if host[0] in ignored_hosts:
+        continue 
     if host[2] >= subtracted_formatted_date:
         activeList.append(host[0])
         if host[1] == 'N':
@@ -70,6 +79,19 @@ for host in activeList:
     body += f'<p>{host}</p>'
 #Attach the HTML body to the email
 msg.attach(MIMEText(body, 'html'))
+
+attachment_content = '\n'.join(activeList)
+attachment_filename = "active_hosts.txt"
+
+# Attach as a .txt file
+attachment = MIMEBase('application', 'octet-stream')
+attachment.set_payload(attachment_content.encode('utf-8'))
+encoders.encode_base64(attachment)
+attachment.add_header('Content-Disposition', f'attachment; filename={attachment_filename}')
+
+# Attach the file to the email
+msg.attach(attachment)
+
 
 try:
     server = smtplib.SMTP('smtp-mail.outlook.com', 587)
