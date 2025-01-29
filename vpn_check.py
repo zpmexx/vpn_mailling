@@ -99,6 +99,7 @@ hostsDict = {}
 
 # salonList = ['A144']
 try:
+    items = False
     for host_name in salonList:
         host = zapi.host.get(filter={"host": host_name})
 
